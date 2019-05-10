@@ -19,6 +19,8 @@ package raft
 
 import "sync"
 import "labrpc"
+import "math/rand"
+import "time"
 
 // import "bytes"
 // import "labgob"
@@ -142,10 +144,10 @@ type AppendEntriesRPC struct {
 
 type RequestVoteArgs struct {
 	// Your data here (3A, 3B).
-	term int
-	candidateId int
-	lastLogIndex int
-	lastLogTerm int
+	Term int
+	CandidateId int
+	LastLogIndex int
+	LastLogTerm int
 }
 
 //
@@ -154,8 +156,8 @@ type RequestVoteArgs struct {
 //
 type RequestVoteReply struct {
 	// Your data here (3A).
-	term int
-	voteGranted bool
+	Term int
+	VoteGranted bool
 }
 
 
@@ -172,13 +174,15 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	//reply=information we have about follower's response to candidate requested vote
 
 	 //Reply false if term < currentTerm
-	 if (reply.term<args.term) {
-		 reply.voteGranted=false
+	 if (args.Term<rf.term) {
+		 reply.VoteGranted=false
+		 reply.Term=rf.term
 		 }
 
 		// If votedFor is null or candidateId, and candidate’s log is at least as up-to-date as receiver’s log, grant vote
-		if ((rf.votedFor==nil) || (rf.votedFor==rf.candidateId)) && (len(rf.log)) {
-			reply.voteGranted=true
+		if (rf.votedFor==nil) {
+			reply.VoteGranted=true
+			rf.votedFor=args.CandidateId
 		}
 }
 
@@ -271,7 +275,8 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	// Your initialization code here (3A, 3B, 3C).
 	//Create a background goroutine in Make() to periodically kick off leader election by:
 	 //sending out RequestVote RPCs when it hasn't heard from another peer for a while. This way, if there is already a leader the peer will learn about it, or become leader itself.
-
+	 interval:=rand.Intn(500)+500
+	 time.Sleep(interval* time.Millisecond)
 
 	 ///if I haven't heard from a leader in a while:
 	 	// for peer in peers:
