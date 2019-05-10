@@ -125,6 +125,21 @@ func (rf *Raft) readPersist(data []byte) {
 // example RequestVote RPC arguments structure.
 // field names must start with capital letters!
 //
+
+type AppendEntriesRPC struct {
+	term int
+	leaderId int
+	prevLogIndex int
+	prevLogTerm int
+	entries []string
+	leaderCommit int
+
+	//Args and reply
+	term int
+	success int
+}
+
+
 type RequestVoteArgs struct {
 	// Your data here (3A, 3B).
 	term int
@@ -143,6 +158,11 @@ type RequestVoteReply struct {
 	voteGranted bool
 }
 
+
+func (rf *Raft) AppendRPCHandler(args *AppendEntriesRPC) {
+	//resets the election timeout.
+}
+
 //
 // example RequestVote RPC handler.
 //
@@ -157,6 +177,9 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		 }
 
 		// If votedFor is null or candidateId, and candidate’s log is at least as up-to-date as receiver’s log, grant vote
+		if ((rf.votedFor==nil) || (rf.votedFor==rf.candidateId)) && (len(rf.log)) {
+			reply.voteGranted=true
+		}
 }
 
 //
