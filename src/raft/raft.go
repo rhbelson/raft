@@ -127,6 +127,10 @@ func (rf *Raft) readPersist(data []byte) {
 //
 type RequestVoteArgs struct {
 	// Your data here (3A, 3B).
+	term int
+	candidateId int
+	lastLogIndex int
+	lastLogTerm int
 }
 
 //
@@ -135,6 +139,8 @@ type RequestVoteArgs struct {
 //
 type RequestVoteReply struct {
 	// Your data here (3A).
+	term int
+	voteGranted bool
 }
 
 //
@@ -142,6 +148,15 @@ type RequestVoteReply struct {
 //
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (3A, 3B).
+	//args=information we have on this prospective leader (i.e., candidate)
+	//reply=information we have about follower's response to candidate requested vote
+
+	 //Reply false if term < currentTerm
+	 if (reply.term<args.term) {
+		 reply.voteGranted=false
+		 }
+
+		// If votedFor is null or candidateId, and candidate’s log is at least as up-to-date as receiver’s log, grant vote
 }
 
 //
@@ -231,6 +246,15 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.me = me
 
 	// Your initialization code here (3A, 3B, 3C).
+	//Create a background goroutine in Make() to periodically kick off leader election by:
+	 //sending out RequestVote RPCs when it hasn't heard from another peer for a while. This way, if there is already a leader the peer will learn about it, or become leader itself.
+
+
+	 ///if I haven't heard from a leader in a while:
+	 	// for peer in peers:
+	 	//go sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply)
+
+
 
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
