@@ -53,7 +53,25 @@ type Raft struct {
 	// Look at the paper's Figure 2 for a description of what
 	// state a Raft server must maintain.
 
+
+	//Persistent State
+	currentTerm int //latest term server has seen (initialized to 0 on first boot, increases monotonically)
+	votedFor int //candidateId that received vote in current term (or null if none)
+	log_entries []string // each entry contains command for state machine, and term when entry was received by leader (first index is 1)
+
+	//Volatile State
+	commitIndex	int //index of highest log entry known to be committed (initialized to 0, increases monotonically)
+	lastApplied int //index of highest log entry applied to state machine (initialized to 0, increases monotonically)
+
+
+	//Volatile state on leaders: (Reinitialized after election)
+	nextIndex []string  //for each server, index of the next log entry to send to that server (initialized to leader last log index + 1)
+	matchIndex []string  //for each server, index of highest log entry known to be replicated on server (initialized to 0, increases monotonically)
+
+
+
 }
+
 
 // return currentTerm and whether this server
 // believes it is the leader.
