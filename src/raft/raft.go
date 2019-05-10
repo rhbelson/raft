@@ -19,6 +19,7 @@ package raft
 
 import "sync"
 import "labrpc"
+import "fmt"
 
 // import "bytes"
 // import "labgob"
@@ -127,10 +128,8 @@ func (rf *Raft) readPersist(data []byte) {
 //
 type RequestVoteArgs struct {
 	// Your data here (3A, 3B).
-	term int
-	candidateId int
-	lastLogIndex int
-	lastLogTerm int
+	Term int
+	CandidateId int
 }
 
 //
@@ -139,8 +138,8 @@ type RequestVoteArgs struct {
 //
 type RequestVoteReply struct {
 	// Your data here (3A).
-	term int
-	voteGranted bool
+	Term int
+	VoteGranted bool
 }
 
 //
@@ -150,13 +149,9 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (3A, 3B).
 	//args=information we have on this prospective leader (i.e., candidate)
 	//reply=information we have about follower's response to candidate requested vote
-
-	 //Reply false if term < currentTerm
-	 if (reply.term<args.term) {
-		 reply.voteGranted=false
-		 }
-
-		// If votedFor is null or candidateId, and candidate’s log is at least as up-to-date as receiver’s log, grant vote
+    fmt.Println("Vote Request received")
+    fmt.Println(args)
+    reply.Term = 5
 }
 
 //
@@ -249,6 +244,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	//Create a background goroutine in Make() to periodically kick off leader election by:
 	 //sending out RequestVote RPCs when it hasn't heard from another peer for a while. This way, if there is already a leader the peer will learn about it, or become leader itself.
 
+    go rf.try()
 
 	 ///if I haven't heard from a leader in a while:
 	 	// for peer in peers:
@@ -260,4 +256,15 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.readPersist(persister.ReadRaftState())
 
 	return rf
+}
+
+func (rf *Raft) try() () {
+    fmt.Println(1)
+    for i, _ := range rf.peers {
+        args := &RequestVoteArgs{}
+        reply := &RequestVoteReply{}
+        args.Term = 10
+        rf.sendRequestVote(i, args, reply)
+        fmt.Println(reply)
+    }
 }
