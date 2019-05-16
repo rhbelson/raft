@@ -292,14 +292,14 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	//Create a background goroutine in Make() to periodically kick off leader election by:
 	 //sending out RequestVote RPCs when it hasn't heard from another peer for a while. This way, if there is already a leader the peer will learn about it, or become leader itself.
 	 rf.timeoutTime=rand.Intn(500)+500
-	 rf.lastTimeoutTime=int(time.Now().UnixNano())
+	 rf.lastTimeoutTime=int(time.Now().UnixNano())/int(time.Millisecond)
 	 fmt.Println(rf.lastTimeoutTime)
 
 
 	 // time.Sleep(interval* time.Millisecond)
 
 	 // go rf.StartElection()
-
+	 go rf.test()
 	 ///if I haven't heard from a leader in a while:
 	 	// for peer in peers:
 	 	//go sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply)
@@ -312,8 +312,9 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	return rf
 }
 func (rf *Raft) test() () {
-	while(1) {
-		fmt.Println(int(time.Now().UnixNano()) - rf.lastTimeoutTime)
+	for(true) {
+		fmt.Println("Here's the time")
+		fmt.Println(int(time.Now().UnixNano())/int(time.Millisecond) - rf.lastTimeoutTime)
 	}
 }
 
