@@ -128,17 +128,20 @@ func (rf *Raft) readPersist(data []byte) {
 // field names must start with capital letters!
 //
 
-type AppendEntriesRPC struct {
-	term int
-	leaderId int
-	prevLogIndex int
-	prevLogTerm int
-	entries []string
-	leaderCommit int
+type AppendEntriesRPCArgs struct {
+	Term int
+	LeaderId int
+	PrevLogIndex int
+	PrevLogTerm int
+	Entries []string
+	LeaderCommit int
 
+}
+
+type AppendEntriesRPCReply struct {
 	//Args and reply
-	term int
-	success int
+	Term int
+	Success int
 }
 
 
@@ -220,6 +223,12 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 	return ok
 }
 
+func (rf *Raft) sendAppendRPC(server int, args *AppendRPCArgs, reply *AppendRPCReply) bool {
+	ok := rf.peers[server].Call("Raft.AppendRPCHandler", args, reply)
+	return ok
+}
+
+
 //
 // the service using Raft (e.g. a k/v server) wants to start
 // agreement on the next command to be appended to Raft's log. if this
@@ -278,6 +287,8 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	 interval:=rand.Intn(500)+500
 	 time.Sleep(interval* time.Millisecond)
 
+	 go rf.try()
+
 	 ///if I haven't heard from a leader in a while:
 	 	// for peer in peers:
 	 	//go sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply)
@@ -288,4 +299,15 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.readPersist(persister.ReadRaftState())
 
 	return rf
+}
+
+func (rf *Raft) try() () {
+    fmt.Println(1)
+    for i, _ := range rf.peers {
+        args := &AppendRPCArgs{}
+        reply := &AppendEntriesRPCReply{}
+        args.Term = 10
+        rf.sendAppendRPC(i, args, reply)
+        fmt.Println(reply)
+    }
 }
