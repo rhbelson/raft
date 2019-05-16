@@ -21,6 +21,8 @@ import "sync"
 import "labrpc"
 import "math/rand"
 import "time"
+import "fmt"
+
 
 // import "bytes"
 // import "labgob"
@@ -64,11 +66,15 @@ type Raft struct {
 	//Volatile State
 	commitIndex	int //index of highest log entry known to be committed (initialized to 0, increases monotonically)
 	lastApplied int //index of highest log entry applied to state machine (initialized to 0, increases monotonically)
+	isLeader bool
+	lastTimeoutTime int
+	timeoutTime int
 
 
 	//Volatile state on leaders: (Reinitialized after election)
 	nextIndex []string  //for each server, index of the next log entry to send to that server (initialized to leader last log index + 1)
 	matchIndex []string  //for each server, index of highest log entry known to be replicated on server (initialized to 0, increases monotonically)
+
 
 
 
@@ -131,10 +137,10 @@ func (rf *Raft) readPersist(data []byte) {
 type AppendEntriesArgs struct {
 	Term int
 	LeaderId int
-	PrevLogIndex int
-	PrevLogTerm int
-	Entries []string
-	LeaderCommit int
+	// PrevLogIndex int
+	// PrevLogTerm int
+	// Entries []string
+	// LeaderCommit int
 
 }
 
@@ -164,7 +170,7 @@ type RequestVoteReply struct {
 }
 
 
-func (rf *Raft) AppendRPCHandler(args *AppendEntriesRPC) {
+func (rf *Raft) AppendRPCHandler(args *AppendEntriesArgs) {
 	//resets the election timeout.
 }
 
@@ -177,13 +183,13 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	//reply=information we have about follower's response to candidate requested vote
 
 	 //Reply false if term < currentTerm
-	 if (args.Term<rf.term) {
+	 if (args.Term<rf.currentTerm) {
 		 reply.VoteGranted=false
-		 reply.Term=rf.term
+		 reply.Term=rf.currentTerm
 		 }
 
 		// If votedFor is null or candidateId, and candidate’s log is at least as up-to-date as receiver’s log, grant vote
-		if (rf.votedFor==nil) {
+		if (rf.votedFor==0) {
 			reply.VoteGranted=true
 			rf.votedFor=args.CandidateId
 		}
@@ -280,14 +286,19 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.peers = peers
 	rf.persister = persister
 	rf.me = me
+	rf.currentTerm=0
 
 	// Your initialization code here (3A, 3B, 3C).
 	//Create a background goroutine in Make() to periodically kick off leader election by:
 	 //sending out RequestVote RPCs when it hasn't heard from another peer for a while. This way, if there is already a leader the peer will learn about it, or become leader itself.
-	 interval:=rand.Intn(500)+500
-	 time.Sleep(interval* time.Millisecond)
+	 rf.timeoutTime=rand.Intn(500)+500
+	 rf.lastTimeoutTime=int(time.Now().UnixNano())
+	 fmt.Println(rf.lastTimeoutTime)
 
-	 go rf.try()
+
+	 // time.Sleep(interval* time.Millisecond)
+
+	 // go rf.StartElection()
 
 	 ///if I haven't heard from a leader in a while:
 	 	// for peer in peers:
@@ -300,8 +311,13 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 	return rf
 }
+func (rf *Raft) test() () {
+	while(1) {
+		fmt.Println(int(time.Now().UnixNano()) - rf.lastTimeoutTime)
+	}
+}
 
-func (rf *Raft) try() () {
+func (rf *Raft) StartElection() () {
     fmt.Println(1)
     for i, _ := range rf.peers {
         args := &AppendEntriesArgs{rf.currentTerm,rf.votedFor}
