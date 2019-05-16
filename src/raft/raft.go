@@ -155,8 +155,8 @@ type RequestVoteArgs struct {
 	// Your data here (3A, 3B).
 	Term int
 	CandidateId int
-	LastLogIndex int
-	LastLogTerm int
+	//LastLogIndex int
+	//LastLogTerm int
 }
 
 //
@@ -182,17 +182,20 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	//args=information we have on this prospective leader (i.e., candidate)
 	//reply=information we have about follower's response to candidate requested vote
 
+     fmt.Println("Request vote received")
+     fmt.Println(rf.me)
+     fmt.Println(args.CandidateId)
 	 //Reply false if term < currentTerm
 	 if (args.Term<rf.currentTerm) {
 		 reply.VoteGranted=false
 		 reply.Term=rf.currentTerm
-		 }
+     }
 
-		// If votedFor is null or candidateId, and candidate’s log is at least as up-to-date as receiver’s log, grant vote
-		if (rf.votedFor==0) {
-			reply.VoteGranted=true
-			rf.votedFor=args.CandidateId
-		}
+	// If votedFor is null or candidateId, and candidate’s log is at least as up-to-date as receiver’s log, grant vote
+	if (rf.votedFor==99999) {
+		reply.VoteGranted=true
+		rf.votedFor=args.CandidateId
+	}
 }
 
 //
@@ -286,19 +289,21 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.peers = peers
 	rf.persister = persister
 	rf.me = me
-	rf.currentTerm=0
+	rf.currentTerm = 0
+    rf.votedFor = 99999
 
 	// Your initialization code here (3A, 3B, 3C).
 	//Create a background goroutine in Make() to periodically kick off leader election by:
 	 //sending out RequestVote RPCs when it hasn't heard from another peer for a while. This way, if there is already a leader the peer will learn about it, or become leader itself.
-	 rf.timeoutTime=rand.Intn(500)+500
-	 rf.lastTimeoutTime=int(time.Now().UnixNano())
+	 rf.timeoutTime = rand.Intn(500) + 500
+	 rf.lastTimeoutTime = int(time.Now().UnixNano()) / int(time.Millisecond)
 	 fmt.Println(rf.lastTimeoutTime)
 
 
 	 // time.Sleep(interval* time.Millisecond)
-
-	 // go rf.StartElection()
+     fmt.Println(rf.peers)
+     fmt.Println(rf.me)
+     go rf.StartElection()
 
 	 ///if I haven't heard from a leader in a while:
 	 	// for peer in peers:
@@ -311,18 +316,34 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 	return rf
 }
-func (rf *Raft) test() () {
-	while(1) {
-		fmt.Println(int(time.Now().UnixNano()) - rf.lastTimeoutTime)
-	}
-}
 
 func (rf *Raft) StartElection() () {
-    fmt.Println(1)
-    for i, _ := range rf.peers {
-        args := &AppendEntriesArgs{rf.currentTerm,rf.votedFor}
-        reply := &AppendEntriesReply{}
-        rf.sendAppendRPC(i, args, reply)
-        fmt.Println(reply)
+    for true {
+        curTime := int(time.Now().UnixNano()) / int(time.Millisecond)
+        if(curTime - rf.lastTimeoutTime > rf.timeoutTime) {
+            fmt.Println("Timeout")
+            //rf.lastTimeoutTime = curTime
+            // start election, and vote for myself? (is that already happening)
+            majority := len(rf.peers)/2+1
+            votes:=1
+            rf.votedFor = rf.me
+            for i, _ := range rf.peers {
+                rf.currentTerm = rf.currentTerm + 1
+                args := &RequestVoteArgs{rf.currentTerm, rf.me}
+                reply := &RequestVoteReply{}
+                rf.sendRequestVote(i, args, reply)
+                fmt.Println(reply)
+                if (reply.VoteGranted==true) {
+                    votes=votes+1
+                }
+                if (votes==majority) {
+                    //We have the majority
+                    fmt.Println("I'm the leaderrrr")
+                    //Make me leader
+                    rf.isLeader = true
+                    rf.lastTimeoutTime = int(time.Now().UnixNano()) / int(time.Millisecond)
+                }
+            }
+        }
     }
 }
