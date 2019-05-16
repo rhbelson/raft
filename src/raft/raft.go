@@ -173,6 +173,7 @@ type RequestVoteReply struct {
 func (rf *Raft) AppendRPCHandler(args *AppendEntriesArgs, reply *AppendEntriesReply) {
 	fmt.Println("A ha append RPC")
     rf.lastTimeoutTime = int(time.Now().UnixNano()) / int(time.Millisecond)
+    rf.votedFor = 99999
 }
 
 //
