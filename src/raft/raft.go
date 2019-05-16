@@ -139,7 +139,7 @@ type AppendEntriesArgs struct {
 	LeaderId int
 	// PrevLogIndex int
 	// PrevLogTerm int
-	// Entries []string
+	Entries []string
 	// LeaderCommit int
 
 }
@@ -170,8 +170,9 @@ type RequestVoteReply struct {
 }
 
 
-func (rf *Raft) AppendRPCHandler(args *AppendEntriesArgs) {
-	//resets the election timeout.
+func (rf *Raft) AppendRPCHandler(args *AppendEntriesArgs, reply *AppendEntriesReply) {
+	fmt.Println("A ha append RPC")
+    rf.lastTimeoutTime = int(time.Now().UnixNano()) / int(time.Millisecond)
 }
 
 //
@@ -304,6 +305,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
      fmt.Println(rf.peers)
      fmt.Println(rf.me)
      go rf.StartElection()
+     go rf.HeartBeat()
 
 	 ///if I haven't heard from a leader in a while:
 	 	// for peer in peers:
@@ -342,6 +344,27 @@ func (rf *Raft) StartElection() () {
                     //Make me leader
                     rf.isLeader = true
                     rf.lastTimeoutTime = int(time.Now().UnixNano()) / int(time.Millisecond)
+                }
+            }
+        }
+    }
+}
+
+func (rf *Raft) HeartBeat() () {
+    fmt.Println("Heart initialized")
+    oldTime := int(time.Now().UnixNano()) / int(time.Millisecond)
+    for true {
+        if(rf.isLeader) {
+            fmt.Println("Heart is working OMG")
+            curTime := int(time.Now().UnixNano()) / int(time.Millisecond)
+            fmt.Println(curTime - oldTime)
+            if(curTime - oldTime > 200) {
+                fmt.Println("The ... the heart it beats!!!")
+                for i, _ := range rf.peers {
+                    var emptyEntry []string
+                    args := &AppendEntriesArgs{rf.currentTerm, rf.me, emptyEntry}
+                    reply := &AppendEntriesReply{}
+                    rf.sendAppendRPC(i, args, reply)
                 }
             }
         }

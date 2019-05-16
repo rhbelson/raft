@@ -1,0 +1,35 @@
+1557972333372
+[0xc00000c8c0 0xc00000c8e0 0xc00000c900]
+0
+1557972333372
+Heart initialized
+[0xc00000cb20 0xc00000cb40 0xc00000cb60]
+1
+1557972333372
+[0xc0001220a0 0xc0001220c0 0xc0001220e0]
+2
+Test (3A): initial election ...
+Heart initialized
+Timeout
+Request vote received
+0
+0
+&{0 false}
+Request vote received
+1
+0
+&{0 true}
+I'm the leaderrrr
+Heart is working OMG
+633
+The ... the heart it beats!!!
+Heart initialized
+Request vote received
+2
+0
+&{0 true}
+Timeout
+2019/05/15 21:05:34 labrpc.Service.dispatch(): unknown method AppendRPCHandler in Raft.AppendRPCHandler; expecting one of [RequestVote]
+Request vote received
+exit status 1
+FAIL	raft	0.680s
