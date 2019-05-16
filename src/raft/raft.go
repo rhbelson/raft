@@ -128,7 +128,7 @@ func (rf *Raft) readPersist(data []byte) {
 // field names must start with capital letters!
 //
 
-type AppendEntriesRPCArgs struct {
+type AppendEntriesArgs struct {
 	Term int
 	LeaderId int
 	PrevLogIndex int
@@ -138,7 +138,7 @@ type AppendEntriesRPCArgs struct {
 
 }
 
-type AppendEntriesRPCReply struct {
+type AppendEntriesReply struct {
 	//Args and reply
 	Term int
 	Success int
@@ -223,7 +223,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 	return ok
 }
 
-func (rf *Raft) sendAppendRPC(server int, args *AppendRPCArgs, reply *AppendRPCReply) bool {
+func (rf *Raft) sendAppendRPC(server int, args *AppendEntriesArgs, reply *AppendEntriesReply) bool {
 	ok := rf.peers[server].Call("Raft.AppendRPCHandler", args, reply)
 	return ok
 }
@@ -304,9 +304,8 @@ func Make(peers []*labrpc.ClientEnd, me int,
 func (rf *Raft) try() () {
     fmt.Println(1)
     for i, _ := range rf.peers {
-        args := &AppendRPCArgs{}
-        reply := &AppendEntriesRPCReply{}
-        args.Term = 10
+        args := &AppendEntriesArgs{rf.currentTerm,rf.votedFor}
+        reply := &AppendEntriesReply{}
         rf.sendAppendRPC(i, args, reply)
         fmt.Println(reply)
     }
