@@ -22,7 +22,7 @@ import "labrpc"
 import "math/rand"
 import "time"
 import "fmt"
-
+import "strconv"
 
 // import "bytes"
 // import "labgob"
@@ -66,6 +66,7 @@ type Raft struct {
 	//Volatile State
 	commitIndex	int //index of highest log entry known to be committed (initialized to 0, increases monotonically)
 	lastApplied int //index of highest log entry applied to state machine (initialized to 0, increases monotonically)
+    isCandidate bool
 	isLeader bool
 	lastTimeoutTime int
 	timeoutTime int
@@ -88,6 +89,8 @@ func (rf *Raft) GetState() (int, bool) {
 	var term int
 	var isleader bool
 	// Your code here (3A).
+    term = rf.currentTerm
+    isleader = rf.isLeader
 	return term, isleader
 }
 
@@ -173,6 +176,11 @@ type RequestVoteReply struct {
 func (rf *Raft) AppendRPCHandler(args *AppendEntriesArgs, reply *AppendEntriesReply) {
 	fmt.Println("A ha append RPC")
     rf.lastTimeoutTime = int(time.Now().UnixNano()) / int(time.Millisecond)
+    if (args.Term > rf.currentTerm) {
+        rf.currentTerm = args.Term
+        rf.isLeader = false
+    }
+    rf.isCandidate = false
     rf.votedFor = 99999
 }
 
@@ -187,6 +195,9 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
      fmt.Println("Request vote received")
      fmt.Println(rf.me)
      fmt.Println(args.CandidateId)
+     fmt.Println(rf.votedFor)
+     fmt.Println(args.Term)
+     fmt.Println(rf.currentTerm)
 	 //Reply false if term < currentTerm
 	 if (args.Term<rf.currentTerm) {
 		 reply.VoteGranted=false
@@ -194,7 +205,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
      }
 
 	// If votedFor is null or candidateId, and candidate’s log is at least as up-to-date as receiver’s log, grant vote
-	if (rf.votedFor==99999) {
+	if (rf.votedFor==99999 || rf.votedFor == args.CandidateId) {
 		reply.VoteGranted=true
 		rf.votedFor=args.CandidateId
 	}
@@ -293,11 +304,13 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.me = me
 	rf.currentTerm = 0
     rf.votedFor = 99999
+    rf.isCandidate = false
+    rf.isLeader = false
 
 	// Your initialization code here (3A, 3B, 3C).
 	//Create a background goroutine in Make() to periodically kick off leader election by:
 	 //sending out RequestVote RPCs when it hasn't heard from another peer for a while. This way, if there is already a leader the peer will learn about it, or become leader itself.
-	 rf.timeoutTime = rand.Intn(500) + 500
+	 rf.timeoutTime = rand.Intn(700) + 500
 	 rf.lastTimeoutTime = int(time.Now().UnixNano()) / int(time.Millisecond)
 	 fmt.Println(rf.lastTimeoutTime)
 
@@ -325,27 +338,42 @@ func (rf *Raft) StartElection() () {
         curTime := int(time.Now().UnixNano()) / int(time.Millisecond)
         if(curTime - rf.lastTimeoutTime > rf.timeoutTime) {
             fmt.Println("Timeout")
+            //fmt.Println(rf.me)
             //rf.lastTimeoutTime = curTime
             // start election, and vote for myself? (is that already happening)
-            majority := len(rf.peers)/2+1
-            votes:=1
+            //majority := len(rf.peers)/2+1
+            yesVotes:=0
+            totalVotes:=0
             rf.votedFor = rf.me
-            for i, _ := range rf.peers {
+            rf.lastTimeoutTime = int(time.Now().UnixNano()) / int(time.Millisecond)
+            if (!rf.isCandidate) {
+                rf.isCandidate = true
                 rf.currentTerm = rf.currentTerm + 1
+            }
+            for i, _ := range rf.peers {
                 args := &RequestVoteArgs{rf.currentTerm, rf.me}
                 reply := &RequestVoteReply{}
-                rf.sendRequestVote(i, args, reply)
-                fmt.Println(reply)
-                if (reply.VoteGranted==true) {
-                    votes=votes+1
+                ret := rf.sendRequestVote(i, args, reply)
+                fmt.Println("Ret")
+                fmt.Println(ret)
+                if (ret) {
+                    totalVotes = totalVotes + 1
+                    //fmt.Println(reply)
+                    if (reply.VoteGranted == true) {
+                        //fmt.Println("Vote granted")
+                        //fmt.Println(rf.me)
+                        yesVotes = yesVotes + 1
+                    }
                 }
-                if (votes==majority) {
-                    //We have the majority
-                    fmt.Println("I'm the leaderrrr")
-                    //Make me leader
-                    rf.isLeader = true
-                    rf.lastTimeoutTime = int(time.Now().UnixNano()) / int(time.Millisecond)
-                }
+            }
+            fmt.Println("Counting votes for " + strconv.Itoa(rf.me) + ": (" + strconv.Itoa(yesVotes) + "/" + strconv.Itoa(totalVotes) + ")")
+            fmt.Println("Num of nodes " + strconv.Itoa(len(rf.peers)))
+            if (yesVotes >= (totalVotes/2) + 1 ) {
+                //We have the majority
+                fmt.Println("I'm the leaderrrr")
+                //Make me leader
+                rf.isLeader = true
+                rf.isCandidate = false
             }
         }
     }
