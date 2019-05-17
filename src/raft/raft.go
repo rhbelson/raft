@@ -23,6 +23,7 @@ import "math/rand"
 import "time"
 import "fmt"
 import "strconv"
+import "runtime"
 
 // import "bytes"
 // import "labgob"
@@ -68,8 +69,8 @@ type Raft struct {
 	lastApplied int //index of highest log entry applied to state machine (initialized to 0, increases monotonically)
     isCandidate bool
 	isLeader bool
-	lastTimeoutTime int
-	timeoutTime int
+	lastTimeoutTime int64
+	timeoutTime int64
 
 
 	//Volatile state on leaders: (Reinitialized after election)
@@ -175,7 +176,7 @@ type RequestVoteReply struct {
 
 func (rf *Raft) AppendRPCHandler(args *AppendEntriesArgs, reply *AppendEntriesReply) {
 	fmt.Println("A ha append RPC")
-    rf.lastTimeoutTime = int(time.Now().UnixNano()) / int(time.Millisecond)
+    rf.lastTimeoutTime = int64(time.Now().UnixNano()) / int64(time.Millisecond)
     if (args.Term > rf.currentTerm) {
         rf.currentTerm = args.Term
         rf.isLeader = false
@@ -310,8 +311,8 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	// Your initialization code here (3A, 3B, 3C).
 	//Create a background goroutine in Make() to periodically kick off leader election by:
 	 //sending out RequestVote RPCs when it hasn't heard from another peer for a while. This way, if there is already a leader the peer will learn about it, or become leader itself.
-	 rf.timeoutTime = rand.Intn(700) + 500
-	 rf.lastTimeoutTime = int(time.Now().UnixNano()) / int(time.Millisecond)
+	 rf.timeoutTime = int64(rand.Intn(500) + 500)
+	 rf.lastTimeoutTime = int64(time.Now().UnixNano()) / int64(time.Millisecond)
 	 fmt.Println(rf.lastTimeoutTime)
 
 
@@ -335,7 +336,9 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 func (rf *Raft) StartElection() () {
     for true {
-        curTime := int(time.Now().UnixNano()) / int(time.Millisecond)
+        curTime := int64(time.Now().UnixNano()) / int64(time.Millisecond)
+        fmt.Println(runtime.NumGoroutine())
+        fmt.Println("Check if: "+strconv.FormatInt(curTime - rf.lastTimeoutTime, 10)+" is greater than: " +strconv.FormatInt(rf.timeoutTime, 10))
         if(curTime - rf.lastTimeoutTime > rf.timeoutTime) {
             fmt.Println("Timeout")
             //fmt.Println(rf.me)
@@ -345,7 +348,7 @@ func (rf *Raft) StartElection() () {
             yesVotes:=0
             totalVotes:=0
             rf.votedFor = rf.me
-            rf.lastTimeoutTime = int(time.Now().UnixNano()) / int(time.Millisecond)
+            rf.lastTimeoutTime = int64(time.Now().UnixNano()) / int64(time.Millisecond)
             if (!rf.isCandidate) {
                 rf.isCandidate = true
                 rf.currentTerm = rf.currentTerm + 1
@@ -381,11 +384,11 @@ func (rf *Raft) StartElection() () {
 
 func (rf *Raft) HeartBeat() () {
     fmt.Println("Heart initialized")
-    oldTime := int(time.Now().UnixNano()) / int(time.Millisecond)
+    oldTime := int64(time.Now().UnixNano()) / int64(time.Millisecond)
     for true {
         if(rf.isLeader) {
             fmt.Println("Heart is working OMG")
-            curTime := int(time.Now().UnixNano()) / int(time.Millisecond)
+            curTime := int64(time.Now().UnixNano()) / int64(time.Millisecond)
             fmt.Println(curTime - oldTime)
             if(curTime - oldTime > 200) {
                 fmt.Println("The ... the heart it beats!!!")
