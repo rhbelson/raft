@@ -92,6 +92,8 @@ func (rf *Raft) GetState() (int, bool) {
 	// Your code here (3A).
     term = rf.currentTerm
     isleader = rf.isLeader
+    fmt.Println("Current checking if node "+strconv.Itoa(rf.me)+"in term "+strconv.Itoa(term)+" is leader: ")
+    fmt.Println(isleader)
 	return term, isleader
 }
 
@@ -206,11 +208,11 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		 reply.VoteGranted=false
 		 reply.Term=rf.currentTerm
      }
-
 	// If votedFor is null or candidateId, and candidate’s log is at least as up-to-date as receiver’s log, grant vote
-	if (rf.votedFor==99999 || rf.votedFor == args.CandidateId) {
+	if (rf.votedFor==99999 || rf.votedFor == args.CandidateId || rf.currentTerm<args.Term) {
 		reply.VoteGranted=true
 		rf.votedFor=args.CandidateId
+		rf.currentTerm=args.Term
 	}
 	rf.mu.Unlock()
 }
