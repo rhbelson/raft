@@ -175,6 +175,7 @@ type RequestVoteReply struct {
 
 
 func (rf *Raft) AppendRPCHandler(args *AppendEntriesArgs, reply *AppendEntriesReply) {
+	rf.mu.Lock()
 	fmt.Println("A ha append RPC")
     rf.lastTimeoutTime = int64(time.Now().UnixNano()) / int64(time.Millisecond)
     if (args.Term > rf.currentTerm) {
@@ -183,6 +184,7 @@ func (rf *Raft) AppendRPCHandler(args *AppendEntriesArgs, reply *AppendEntriesRe
     }
     rf.isCandidate = false
     rf.votedFor = 99999
+    rf.mu.Unlock()
 }
 
 //
@@ -192,7 +194,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (3A, 3B).
 	//args=information we have on this prospective leader (i.e., candidate)
 	//reply=information we have about follower's response to candidate requested vote
-
+	 rf.mu.Lock()
      fmt.Println("Request vote received")
      fmt.Println(rf.me)
      fmt.Println(args.CandidateId)
@@ -210,6 +212,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		reply.VoteGranted=true
 		rf.votedFor=args.CandidateId
 	}
+	rf.mu.Unlock()
 }
 
 //
@@ -336,6 +339,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 func (rf *Raft) StartElection() () {
     for true {
+    	rf.mu.Lock()
         curTime := int64(time.Now().UnixNano()) / int64(time.Millisecond)
         fmt.Println(runtime.NumGoroutine())
         fmt.Println("Check if: "+strconv.FormatInt(curTime - rf.lastTimeoutTime, 10)+" is greater than: " +strconv.FormatInt(rf.timeoutTime, 10))
@@ -379,6 +383,7 @@ func (rf *Raft) StartElection() () {
                 rf.isCandidate = false
             }
         }
+    rf.mu.Unlock()
     }
 }
 
@@ -386,6 +391,7 @@ func (rf *Raft) HeartBeat() () {
     fmt.Println("Heart initialized")
     oldTime := int64(time.Now().UnixNano()) / int64(time.Millisecond)
     for true {
+    	rf.mu.Lock()
         if(rf.isLeader) {
             fmt.Println("Heart is working OMG")
             curTime := int64(time.Now().UnixNano()) / int64(time.Millisecond)
@@ -400,5 +406,6 @@ func (rf *Raft) HeartBeat() () {
                 }
             }
         }
+    rf.mu.Unlock()
     }
 }
